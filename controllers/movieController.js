@@ -152,23 +152,44 @@ exports.deleteMovie = catchAsync(async (req, res, next) => {
   const movie = await Movie.findByIdAndDelete(req.params.id);
   // console.log(movie.images);
 
+  const filenames = movie.images.map((item) => item.split("/")[4]);
+  console.log(filenames);
+
+  // pass to s3.deleteObject to delete it.
+  s3Config.deleteObject(
+    {
+      Bucket: process.env.AWS_MOVIE_IMAGES_BUCKET_NAME,
+      Key: `${filenames}`,
+    },
+    async (err, data) => {
+      if (process.env.NODE_ENV === "development") {
+        if (err) {
+          console.log("Error: Object delete failed.");
+          console.log(err.stack);
+        } else {
+          console.log("Success: Object delete successful.");
+        }
+      }
+    }
+  );
+
   // for (const k in file) {
   //   movie.images.push({ Key: file[k].fileName });
   // }
 
   // if (req && req.files) {
-  const params = {
-    Bucket: process.env.AWS_MOVIE_IMAGES_BUCKET_NAME,
-    Delete: {
-      // required
-      Objects: movie.images,
-    },
-  };
+  // const params = {
+  //   Bucket: process.env.AWS_MOVIE_IMAGES_BUCKET_NAME,
+  //   Delete: {
+  //     // required
+  //     Objects: movie.images,
+  //   },
+  // };
 
-  s3Config.deleteObjects(params, function (err, data) {
-    if (err) console.log(err); // an error occurred
-    else console.log(data); // successful response
-  });
+  // s3Config.deleteObjects(params, function (err, data) {
+  //   if (err) console.log(err); // an error occurred
+  //   else console.log(data); // successful response
+  // });
 
   if (!movie) {
     return next(new AppError("Movie not found", 404));
