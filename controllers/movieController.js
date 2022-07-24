@@ -109,19 +109,19 @@ exports.getAMovie = catchAsync(async (req, res, next) => {
 exports.updateMovie = catchAsync(async (req, res, next) => {
   const getMovieFirst = await Movie.findOne({ _id: req.params.id });
 
-  for (const k in file) {
-    getMovieFirst.images.push({ Key: file[k].fileName });
-  }
-
-  // if (req && req.files) {
-  const params = {
-    Bucket: process.env.AWS_MOVIE_IMAGES_BUCKET_NAME,
-    Delete: {
-      // required
-      Objects: objects,
-    },
-  };
+  // for (const k in file) {
+  //   getMovieFirst.images.push({ Key: file[k].fileName });
   // }
+
+  if (req && req.files) {
+    const params = {
+      Bucket: process.env.AWS_MOVIE_IMAGES_BUCKET_NAME,
+      Delete: {
+        // required
+        Objects: objects,
+      },
+    };
+  }
 
   const filteredObjs = filterObj(
     req.body,
@@ -235,6 +235,42 @@ exports.getCommentsStats = catchAsync(async (req, res, next) => {
     message: "Movie Stats retrieved successfully",
     data: {
       stats,
+    },
+  });
+});
+
+exports.toggleMovieActiveStatus = catchAsync(async (req, res, next) => {
+  const movie = await Movie.findById(req.params.id);
+
+  if (!movie) {
+    return next(new AppError("Movie not found", 404));
+  }
+
+  movie.isActive = !movie.isActive;
+  movie.save({ validateBeforeSave: true });
+
+  res.json({
+    message: "Movie status has successfully updated",
+    data: {
+      movie,
+    },
+  });
+});
+
+exports.toggleMovieFeaturedStatus = catchAsync(async (req, res, next) => {
+  const movie = await Movie.findById(req.params.id);
+
+  if (!movie) {
+    return next(new AppError("Movie not found", 404));
+  }
+
+  movie.isFeatured = !movie.isFeatured;
+  movie.save({ validateBeforeSave: true });
+
+  res.json({
+    message: "Movie status has successfully updated",
+    data: {
+      movie,
     },
   });
 });

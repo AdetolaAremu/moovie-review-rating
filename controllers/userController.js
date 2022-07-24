@@ -100,7 +100,7 @@ exports.updateLoggedInUser = catchAsync(async (req, res, next) => {
   );
   if (req.file) filteredObjs.avatar = req.file.location;
 
-  const user = await User.findByIdAndUpdate(req.user.id, filteredObjs, {
+  const user = await User.findByIdAndUpdate(req.user._id, filteredObjs, {
     new: true,
     runValidators: true,
   });

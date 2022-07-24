@@ -15,7 +15,7 @@ const signedToken = (id) => {
 exports.registerUser = catchAsync(async (req, res, next) => {
   const otpToken = (Math.random() + 1).toString(36).substring(2);
 
-  const newUser = await User.create({
+  await User.create({
     first_name: req.body.first_name,
     last_name: req.body.last_name,
     middle_name: req.body.middle_name,
@@ -93,7 +93,7 @@ exports.loginUser = catchAsync(async (req, res, next) => {
     }
 
     if (!(await user.correctPassword(password, user.password))) {
-      return next(new AppError("Email and Password to not match", 400));
+      return next(new AppError("Email and Password do not match", 400));
     }
 
     const token = signedToken(user.id);
@@ -145,7 +145,7 @@ exports.loginUser = catchAsync(async (req, res, next) => {
     }
 
     if (!(await user.correctPassword(password, user.password))) {
-      return next(new AppError("Email and Password to not match", 400));
+      return next(new AppError("Email and Password do not match", 400));
     }
 
     const token = signedToken(user.id);

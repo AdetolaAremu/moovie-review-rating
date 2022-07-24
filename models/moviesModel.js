@@ -34,13 +34,13 @@ const moviesSchema = new mongoose.Schema(
     category: {
       type: mongoose.Schema.ObjectId,
       ref: "Category",
-      // required: [true, "Movie must belong to a category"],
+      required: [true, "Movie must belong to a category"],
     },
     actor: [
       {
         type: mongoose.Schema.ObjectId,
         ref: "Actor",
-        // required: [true, "A movie must have actors"],
+        required: [true, "A movie must have actors"],
       },
     ],
     createdAt: {
@@ -77,7 +77,7 @@ moviesSchema.pre(/^find/, function (next) {
 });
 
 moviesSchema.virtual("thecomment", {
-  ref: "CommentRating",
+  ref: "Comment",
   foreignField: "movie",
   localField: "_id",
 });

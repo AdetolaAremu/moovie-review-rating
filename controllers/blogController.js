@@ -1,6 +1,9 @@
-const blogPost = require('../models/blogPostModel');
-const catchAsync = require('../utils/catchAsync');
-const AppError = require('../utils/AppError');
+const multer = require("multer");
+const AWS = require("aws-sdk");
+const multerS3 = require("multer-s3");
+const blogPost = require("../models/blogPostModel");
+const catchAsync = require("../utils/catchAsync");
+const AppError = require("../utils/AppError");
 
 // S3 config
 const s3Config = new AWS.S3({
@@ -31,7 +34,7 @@ const multerS3Config = multerS3({
     if (process.env.NODE_ENV === "development") {
       console.log(file);
     }
-    cb(null, `actor-${Date.now().toString()}`);
+    cb(null, `movie-${Date.now().toString()}`);
   },
 });
 
@@ -45,7 +48,7 @@ const upload = multer({
 });
 
 // to upload the image
-exports.uploadActorAvatar = upload.single("coverImage");
+exports.uploadBlogImage = upload.single("coverImage");
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -59,10 +62,11 @@ exports.getAllPosts = catchAsync(async (req, res, next) => {
   const posts = await blogPost.find();
 
   res.json({
-    message: 'Blog post retrieved', 
+    message: "Blog posts retrieved",
+    postCount: posts.length,
     data: {
-      posts
-    }
+      posts,
+    },
   });
 });
 
@@ -71,64 +75,64 @@ exports.createPost = catchAsync(async (req, res, next) => {
     title: req.body.title,
     body: req.body.body,
     tags: req.body.tags,
-    coverImage: req.file.location,
+    coverImage: "image.jpg",
     isFeatured: req.body.isFeatured,
-    category: req.body.category
+    category: req.body.category,
   });
 
   res.json({
-    message: 'Post created successfully',
+    message: "Post created successfully",
     data: {
-      post
-    }
+      post,
+    },
   });
 });
 
 exports.getPost = catchAsync(async (req, res, next) => {
-  const post = await blogPost.findById(req.params.id);
+  const post = await blogPost.findById(req.params.id).populate("thecomments");
 
   if (!post) {
-    return next(new AppError('Post not found'));
+    return next(new AppError("Post not found"));
   }
 
   res.json({
-    message: 'Post retrieved successfully',
+    message: "Post retrieved successfully",
     data: {
-      post
-    }
+      post,
+    },
   });
 });
 
 exports.updatePost = catchAsync(async (req, res, next) => {
-    // find the actor first using find one
-    const findFirst = await blogPost.findOne({ _id: req.params.id });
+  // find the actor first using find one
+  const findFirst = await blogPost.findOne({ _id: req.params.id });
 
-    // then delete the image of the actor if req has file in it
-    if (req && req.file) {
-      const unfiltered = findFirst;
-      const filename = unfiltered.avatar.split("/")[3];
-      // console.log(filename);
-  
-      await s3Config.deleteObject(
-        {
-          Bucket: process.env.AWS_BLOG_POST_IMAGE,
-          Key: `${filename}`,
-        },
-        async (err, data) => {
-          console.error(err);
-          console.log(data);
-          if (process.env.NODE_ENV === "development") {
-            if (err) {
-              console.log("Error: Object delete failed.");
-            } else {
-              console.log("Success: Object delete successful.");
-            }
+  // then delete the image of the actor if req has file in it
+  if (req && req.file) {
+    const unfiltered = findFirst;
+    const filename = unfiltered.avatar.split("/")[3];
+    // console.log(filename);
+
+    await s3Config.deleteObject(
+      {
+        Bucket: process.env.AWS_BLOG_POST_IMAGE,
+        Key: `${filename}`,
+      },
+      async (err, data) => {
+        console.error(err);
+        console.log(data);
+        if (process.env.NODE_ENV === "development") {
+          if (err) {
+            console.log("Error: Object delete failed.");
+          } else {
+            console.log("Success: Object delete successful.");
           }
         }
-      );
-    }
+      }
+    );
+  }
 
-    // then find again and update the actor
+  // then find again and update the actor
   const filteredObjs = filterObj(req.body, "title", "body", "tags", {
     new: true,
     runValidators: true,
@@ -136,7 +140,7 @@ exports.updatePost = catchAsync(async (req, res, next) => {
 
   if (req.file) filteredObjs.coverImage = req.file.location;
 
-  if(req.tags) findFirst.tags.delete() //delete if new req comes with tags
+  if (req.tags) findFirst.tags.delete(); //delete if new req comes with tags
 
   const post = await blogPost.findByIdAndUpdate(req.params.id, filteredObjs, {
     new: true,
@@ -193,21 +197,14 @@ exports.toggleBlogPostActive = catchAsync(async (req, res, next) => {
     return next(new AppError("Post not found", 404));
   }
 
-  if (blog.isActive === true){
-    blog.isActive === false;
-    blog.save();
-  }
-
-  if (blog.isActive === false){
-    blog.isActive === true;
-    blog.save();
-  }
+  blog.isActive = !blog.isActive;
+  blog.save({ validateBeforeSave: true });
 
   res.json({
-    message: 'Category active status updated successfully',
+    message: "Category active status updated successfully",
     data: {
-      blog
-    }
+      blog,
+    },
   });
 });
 
@@ -218,13 +215,49 @@ exports.toggleBlogPostFeatured = catchAsync(async (req, res, next) => {
     return next(new AppError("Post not found", 404));
   }
 
-  blog.Active !== blog.Active
-  blog.save({ validateBeforeSave: true })
+  blog.isFeatured = !blog.isFeatured;
+  blog.save({ validateBeforeSave: true });
 
   res.json({
-    message: 'Post featured status updated successfully',
+    message: "Post featured status updated successfully",
     data: {
-      blog
-    }
+      blog,
+    },
+  });
+});
+
+exports.getBlogCommentStats = catchAsync(async (req, res, next) => {
+  const blog = await blogPost.aggregate([
+    {
+      $lookup: {
+        from: "blogcomments",
+        localField: "_id",
+        foreignField: "blog",
+        as: "comments_count",
+      },
+    },
+    {
+      $addFields: { comments_count: { $size: "$comments_count" } },
+    },
+    {
+      $sort: { comments_count: -1 },
+    },
+    {
+      $project: {
+        isFeatured: 0,
+        isActive: 0,
+        tags: 0,
+        lastUpdatedAt: 0,
+        category: 0,
+        __v: 0,
+      },
+    },
+  ]);
+
+  res.json({
+    message: "Blog Comments stats retrieved successfully",
+    data: {
+      blog,
+    },
   });
 });

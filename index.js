@@ -14,6 +14,9 @@ const movieRouter = require("./routes/movieRoute");
 const commentRouter = require("./routes/commentRoutes");
 const followRouter = require("./routes/followRoutes");
 const activityRouter = require("./routes/activityRoutes");
+const blogCategoryRouter = require("./routes/blogCategoryRoutes");
+const blogRouter = require("./routes/blogRoutes");
+const blogCommentRouter = require("./routes/blogCommentRoutes");
 
 // error handlers
 const AppError = require("./utils/AppError");
@@ -66,6 +69,9 @@ app.use("/api/v1/movies", movieRouter);
 app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/follow", followRouter);
 app.use("/api/v1/activities", activityRouter);
+app.use("/api/v1/blog-categories", blogCategoryRouter);
+app.use("/api/v1/blogs", blogRouter);
+app.use("/api/v1/blog-comments", blogCommentRouter);
 
 // If any route is not found, then we throw an error using this middleware
 app.use("*", (req, res, next) => {

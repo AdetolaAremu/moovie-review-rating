@@ -6,7 +6,6 @@ const commentRoute = require("../routes/commentRoutes");
 const router = express.Router();
 
 router.use("/:movieID/comments", commentRoute);
-// console.log(router.stack);
 
 router.get("/stats", movieController.getCommentsStats);
 
@@ -23,6 +22,7 @@ router.post(
   movieController.uploadImages,
   movieController.createMovie
 );
+
 router
   .route("/:id")
   .patch(
@@ -34,6 +34,22 @@ router
     authController.privateRoute,
     authController.restrictTo("admin"),
     movieController.deleteMovie
+  );
+
+router
+  .route("/:id/featured")
+  .patch(
+    authController.privateRoute,
+    authController.restrictTo("admin"),
+    movieController.toggleMovieFeaturedStatus
+  );
+
+router
+  .route("/:id/active")
+  .patch(
+    authController.privateRoute,
+    authController.restrictTo("admin"),
+    movieController.toggleMovieActiveStatus
   );
 
 module.exports = router;
