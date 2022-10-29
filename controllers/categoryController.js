@@ -1,3 +1,4 @@
+const APIFeatures = require("../utils/apiFeatures");
 const Category = require("../models/categoryModel");
 const AppError = require("../utils/AppError");
 const catchAsync = require("../utils/catchAsync");
@@ -11,7 +12,13 @@ const filterObj = (obj, ...allowedFields) => {
 };
 
 exports.getAllCategories = catchAsync(async (req, res, next) => {
-  const categories = await Category.find();
+  const Features = new APIFeatures(Category.find(), req.query)
+    .sort()
+    .fields()
+    .paginate()
+    .filter();
+
+  const categories = await Features.query;
 
   res.status(200).json({
     message: "Categories retrieved",

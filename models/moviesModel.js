@@ -13,6 +13,10 @@ const moviesSchema = new mongoose.Schema(
       minlength: [10, "Summary can not be less than 10 characters"],
       maxlength: [350, "Summary can not be more than 350 characters"],
     },
+    yearReleased: {
+      type: Date,
+      required: [true, "Movie year is required"],
+    },
     averageRating: {
       type: Number,
       default: 0,
@@ -43,6 +47,10 @@ const moviesSchema = new mongoose.Schema(
         required: [true, "A movie must have actors"],
       },
     ],
+    movieReleaseDate: {
+      type: Date,
+      required: true,
+    },
     createdAt: {
       type: Date,
       default: Date.now(),

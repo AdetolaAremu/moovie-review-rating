@@ -2,6 +2,7 @@ const multer = require("multer");
 const AWS = require("aws-sdk");
 const multerS3 = require("multer-s3");
 const sharp = require("sharp");
+const APIFeatures = require("../utils/apiFeatures");
 const User = require("../models/userModel");
 const AppError = require("../utils/AppError");
 const catchAsync = require("../utils/catchAsync");
@@ -60,7 +61,13 @@ const filterObj = (obj, ...allowedFields) => {
 };
 
 exports.getAllUsers = catchAsync(async (req, res, next) => {
-  const users = await User.find();
+  const Features = new APIFeatures(User.find(), req.query)
+    .sort()
+    .fields()
+    .filter()
+    .paginate();
+
+  const users = await Features.query;
 
   res.status(200).json({
     message: "Users retrieved successfully",

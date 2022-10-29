@@ -1,8 +1,7 @@
 const multer = require("multer");
 const AWS = require("aws-sdk");
 const multerS3 = require("multer-s3");
-const sharp = require("sharp");
-const { promisify } = require("util");
+const APIFeatures = require("../utils/apiFeatures");
 const Actor = require("../models/actorModel");
 const AppError = require("../utils/AppError");
 const catchAsync = require("../utils/catchAsync");
@@ -52,9 +51,6 @@ const upload = multer({
 // to upload the image
 exports.uploadActorAvatar = upload.single("avatar");
 
-// delete image/file
-// const unlinkAsync = promisify(fs.unlink);
-
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
   Object.keys(obj).forEach((el) => {
@@ -64,7 +60,12 @@ const filterObj = (obj, ...allowedFields) => {
 };
 
 exports.getAllActors = catchAsync(async (req, res, next) => {
-  const actors = await Actor.find();
+  const Features = new APIFeatures(Actor.find(), req.query)
+    .sort()
+    .fields()
+    .filter()
+    .paginate();
+  const actors = await Features.query;
 
   res.status(200).json({
     message: "Actors retrieved successfully",
@@ -115,7 +116,7 @@ exports.updateActor = catchAsync(async (req, res, next) => {
     const filename = unfiltered.avatar.split("/")[3];
     // console.log(filename);
 
-    await s3Config.deleteObject(
+    s3Config.deleteObject(
       {
         Bucket: process.env.AWS_ACTOR_AVATAR_BUCKET_NAME,
         Key: `${filename}`,
@@ -132,6 +133,28 @@ exports.updateActor = catchAsync(async (req, res, next) => {
         }
       }
     );
+
+    const filteredObjs = filterObj(req.body, "name", "description"); //work on last updated at after update
+
+    const actor = await blogPost.findByIdAndUpdate(
+      getMovieFirst.id,
+      filteredObjs,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!actor) {
+      return next(new AppError("Movie not found", 404));
+    }
+
+    res.status(200).json({
+      message: "Actor post updated successfully",
+      data: {
+        actor,
+      },
+    });
   }
 
   // then find again and update the actor

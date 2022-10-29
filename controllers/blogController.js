@@ -1,6 +1,7 @@
 const multer = require("multer");
 const AWS = require("aws-sdk");
 const multerS3 = require("multer-s3");
+const APIFeatures = require("../utils/apiFeatures");
 const blogPost = require("../models/blogPostModel");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/AppError");
@@ -59,7 +60,13 @@ const filterObj = (obj, ...allowedFields) => {
 };
 
 exports.getAllPosts = catchAsync(async (req, res, next) => {
-  const posts = await blogPost.find();
+  const Features = new APIFeatures(blogPost.find(), req.query)
+    .sort()
+    .paginate()
+    .filter()
+    .fields();
+
+  const posts = await Features.query;
 
   res.json({
     message: "Blog posts retrieved",
@@ -75,7 +82,7 @@ exports.createPost = catchAsync(async (req, res, next) => {
     title: req.body.title,
     body: req.body.body,
     tags: req.body.tags,
-    coverImage: "image.jpg",
+    coverImage: file.location,
     isFeatured: req.body.isFeatured,
     category: req.body.category,
   });
@@ -113,7 +120,7 @@ exports.updatePost = catchAsync(async (req, res, next) => {
     const filename = unfiltered.avatar.split("/")[3];
     // console.log(filename);
 
-    await s3Config.deleteObject(
+    s3Config.deleteObject(
       {
         Bucket: process.env.AWS_BLOG_POST_IMAGE,
         Key: `${filename}`,
@@ -130,6 +137,28 @@ exports.updatePost = catchAsync(async (req, res, next) => {
         }
       }
     );
+
+    const filteredObjs = filterObj(req.body, "title", "body", "tags"); //work on last updated at after update
+
+    const blog = await blogPost.findByIdAndUpdate(
+      getMovieFirst.id,
+      filteredObjs,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!blog) {
+      return next(new AppError("Movie not found", 404));
+    }
+
+    res.status(200).json({
+      message: "Blog post updated successfully",
+      data: {
+        blog,
+      },
+    });
   }
 
   // then find again and update the actor

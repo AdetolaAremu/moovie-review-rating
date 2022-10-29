@@ -12,6 +12,10 @@ const activitySchema = new mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: "Movie",
   },
+  // createdAt: {
+  //   type: Date,
+  //   default: Date.now()
+  // }
 });
 
 activitySchema.pre(/^find/, function (next) {

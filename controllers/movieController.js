@@ -1,6 +1,7 @@
 const multer = require("multer");
 const AWS = require("aws-sdk");
 const multerS3 = require("multer-s3");
+const APIFeatures = require("../utils/apiFeatures");
 const Movie = require("../models/moviesModel");
 const AppError = require("../utils/AppError");
 const catchAsync = require("../utils/catchAsync");
@@ -58,7 +59,12 @@ const filterObj = (obj, ...allowedFields) => {
 };
 
 exports.getMovies = catchAsync(async (req, res, next) => {
-  const movies = await Movie.find();
+  const Features = new APIFeatures(Movie.find(), req.query)
+    .sort()
+    .filter()
+    .fields()
+    .paginate();
+  const movies = await Features.query;
 
   res.status(200).json({
     message: "Movies retrieved successfully",
@@ -80,6 +86,7 @@ exports.createMovie = catchAsync(async (req, res, next) => {
     category: req.body.category,
     summary: req.body.summary,
     actor: req.body.actor,
+    movieReleaseDate: req.body.movieReleaseDate,
     images: allImages,
   });
 
@@ -109,10 +116,6 @@ exports.getAMovie = catchAsync(async (req, res, next) => {
 exports.updateMovie = catchAsync(async (req, res, next) => {
   const getMovieFirst = await Movie.findOne({ _id: req.params.id });
 
-  // for (const k in file) {
-  //   getMovieFirst.images.push({ Key: file[k].fileName });
-  // }
-
   if (req && req.files) {
     const params = {
       Bucket: process.env.AWS_MOVIE_IMAGES_BUCKET_NAME,
@@ -123,12 +126,14 @@ exports.updateMovie = catchAsync(async (req, res, next) => {
     };
   }
 
+  // fields I want to be updated
   const filteredObjs = filterObj(
     req.body,
     "name",
     "category",
     "summary",
-    "actor"
+    "actor",
+    "movieReleaseDate"
   );
 
   const movie = await Movie.findByIdAndUpdate(getMovieFirst.id, filteredObjs, {
@@ -149,47 +154,34 @@ exports.updateMovie = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteMovie = catchAsync(async (req, res, next) => {
-  const movie = await Movie.findByIdAndDelete(req.params.id);
-  // console.log(movie.images);
+  const movie = await Movie.findById(req.params.id);
 
   const filenames = movie.images.map((item) => item.split("/")[4]);
-  console.log(filenames);
 
-  // pass to s3.deleteObject to delete it.
-  s3Config.deleteObject(
-    {
-      Bucket: process.env.AWS_MOVIE_IMAGES_BUCKET_NAME,
-      Key: `${filenames}`,
+  const options = {
+    Bucket: process.env.AWS_MOVIE_IMAGES_BUCKET_NAME,
+    Delete: {
+      Objects: filenames,
+      Quiet: false,
     },
+  };
+
+  // So, I can delete one image from AWS but I have problem with deleting more than one image
+  // I have tried almost everything to no avail.
+  s3Config.deleteObjects(options, function (err, data) {
     async (err, data) => {
       if (process.env.NODE_ENV === "development") {
         if (err) {
           console.log("Error: Object delete failed.");
+
           console.log(err.stack);
         } else {
           console.log("Success: Object delete successful.");
+          console.log(data);
         }
       }
-    }
-  );
-
-  // for (const k in file) {
-  //   movie.images.push({ Key: file[k].fileName });
-  // }
-
-  // if (req && req.files) {
-  // const params = {
-  //   Bucket: process.env.AWS_MOVIE_IMAGES_BUCKET_NAME,
-  //   Delete: {
-  //     // required
-  //     Objects: movie.images,
-  //   },
-  // };
-
-  // s3Config.deleteObjects(params, function (err, data) {
-  //   if (err) console.log(err); // an error occurred
-  //   else console.log(data); // successful response
-  // });
+    };
+  });
 
   if (!movie) {
     return next(new AppError("Movie not found", 404));

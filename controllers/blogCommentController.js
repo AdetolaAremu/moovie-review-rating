@@ -1,3 +1,4 @@
+const APIFeatures = require("../utils/apiFeatures");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/AppError");
 const blogCommentModel = require("../models/blogCommentsModel");
@@ -11,7 +12,13 @@ const filterObj = (obj, ...allowedFields) => {
 };
 
 exports.getComments = catchAsync(async (req, res, next) => {
-  const comments = await blogCommentModel.find();
+  const Features = new APIFeatures(blogCommentModel.find(), req.query)
+    .fields()
+    .filter()
+    .paginate()
+    .sort();
+
+  const comments = await Features.query;
 
   res.json({
     message: "Comments retrieved successfully",

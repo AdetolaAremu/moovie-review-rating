@@ -1,3 +1,4 @@
+const APIFeatures = require("../utils/apiFeatures");
 const Comment = require("../models/commentModel");
 const Activity = require("../models/activitiesModel");
 const AppError = require("../utils/AppError");
@@ -16,7 +17,13 @@ exports.getAllComments = catchAsync(async (req, res, next) => {
 
   if (req.params.movieID) filter = { movie: req.params.movieID };
 
-  const comments = await Comment.find(filter);
+  const Features = new APIFeatures(Comment.find(filter), req.query)
+    .sort()
+    .fields()
+    .filter()
+    .paginate();
+
+  const comments = await Features.query;
 
   res.json({
     message: "Comments retrieved successfully",

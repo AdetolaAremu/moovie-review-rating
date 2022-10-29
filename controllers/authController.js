@@ -27,11 +27,6 @@ exports.registerUser = catchAsync(async (req, res, next) => {
     otp: otpToken,
   });
 
-  // const url = `${req.protocol}://${req.get("host")}/account-verification/${
-  //   newUser.username
-  // }/${newUser.otp}`;
-  // await new emailHandler(newUser, url).sendWelcomeEmail();
-
   res.status(200).json({
     message:
       "Your account has been created, please check your email for verification code",
