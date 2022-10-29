@@ -1,4 +1,4 @@
-# This is a movie rating application.Technologies used Node.js, Express, MongoDB and AWS S3.
+# This is a movie review and rating application.Technologies used Node.js, Express, MongoDB and AWS S3.
 
 # The design pattern for this MVC, there are separated folders for models, controllers, separated routes, (though no views as it just a backend app for now).
 
